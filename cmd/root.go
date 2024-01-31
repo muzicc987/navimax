@@ -40,7 +40,7 @@ Complete documentation is available at https://www.navidrome.org/docs`,
 			preRun()
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			runNavidrome()
+			runNavidrome(context.Background())
 		},
 		Version: consts.Version,
 	}
@@ -61,7 +61,7 @@ func preRun() {
 	conf.Load()
 }
 
-func runNavidrome() {
+func runNavidrome(ctx context.Context) {
 	db.Init()
 	defer func() {
 		if err := db.Close(); err != nil {
@@ -70,7 +70,7 @@ func runNavidrome() {
 		log.Info("Navidrome stopped, bye.")
 	}()
 
-	g, ctx := errgroup.WithContext(context.Background())
+	g, ctx := errgroup.WithContext(ctx)
 	g.Go(startServer(ctx))
 	g.Go(startSignaler(ctx))
 	g.Go(startScheduler(ctx))
