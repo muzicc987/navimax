@@ -107,14 +107,14 @@ single: warning-noui-build ##@Cross_Compilation Build binaries for a single supp
 		exit 1; \
 	fi
 	@echo "Building binaries for ${GOOS}/${GOARCH} using builder ${CI_RELEASER_VERSION}"
-	docker run -t -v $(PWD):/workspace -e GOOS -e GOARCH -w /workspace deluan/ci-goreleaser:$(CI_RELEASER_VERSION) \
+	docker run -t -v $(PWD):/workspace -e GOOS -e GOARCH -e GOARM -w /workspace deluan/ci-goreleaser:$(CI_RELEASER_VERSION) \
  		goreleaser build --clean --snapshot -p 2 --single-target --id navidrome_${GOOS}_${GOARCH}
 .PHONY: single
 
-docker: buildjs ##@Build Build Docker linux/amd64 image (tagged as `deluan/navidrome:develop`)
-	GOOS=linux GOARCH=amd64 make single
+docker: buildjs ##@Build Build Docker linux/arm/v7 image (tagged as `deluan/navidrome:develop`)
+	GOOS=linux GOARCH=arm GOARM=7 make single
 	@echo "Building Docker image"
-	docker build . --platform linux/amd64 -t deluan/navidrome:develop -f .github/workflows/pipeline.dockerfile
+	docker build . --platform linux/arm/v7 -t deluan/navidrome:develop -f .github/workflows/pipeline.dockerfile
 .PHONY: docker
 
 warning-noui-build:
