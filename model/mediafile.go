@@ -12,8 +12,8 @@ import (
 
 	"github.com/navidrome/navidrome/conf"
 	"github.com/navidrome/navidrome/consts"
-	"github.com/navidrome/navidrome/utils"
 	"github.com/navidrome/navidrome/utils/slice"
+	"github.com/navidrome/navidrome/utils/str"
 )
 
 type MediaFile struct {
@@ -21,6 +21,7 @@ type MediaFile struct {
 	Bookmarkable `structs:"-"`
 
 	ID                   string  `structs:"id" json:"id"`
+	LibraryID            int     `structs:"library_id" json:"libraryId"`
 	Path                 string  `structs:"path" json:"path"`
 	Title                string  `structs:"title" json:"title"`
 	Album                string  `structs:"album" json:"album"`
@@ -43,10 +44,11 @@ type MediaFile struct {
 	Suffix               string  `structs:"suffix" json:"suffix"`
 	Duration             float32 `structs:"duration" json:"duration"`
 	BitRate              int     `structs:"bit_rate" json:"bitRate"`
+	SampleRate           int     `structs:"sample_rate" json:"sampleRate"`
 	Channels             int     `structs:"channels" json:"channels"`
 	Genre                string  `structs:"genre" json:"genre"`
 	Genres               Genres  `structs:"-" json:"genres"`
-	FullText             string  `structs:"full_text" json:"fullText"`
+	FullText             string  `structs:"full_text" json:"-"`
 	SortTitle            string  `structs:"sort_title" json:"sortTitle,omitempty"`
 	SortAlbumName        string  `structs:"sort_album_name" json:"sortAlbumName,omitempty"`
 	SortArtistName       string  `structs:"sort_artist_name" json:"sortArtistName,omitempty"`
@@ -197,7 +199,7 @@ func (mfs MediaFiles) ToAlbum() Album {
 	a.Genre = slice.MostFrequent(a.Genres).Name
 	slices.SortFunc(a.Genres, func(a, b Genre) int { return cmp.Compare(a.ID, b.ID) })
 	a.Genres = slices.Compact(a.Genres)
-	a.FullText = " " + utils.SanitizeStrings(fullText...)
+	a.FullText = " " + str.SanitizeStrings(fullText...)
 	a = fixAlbumArtist(a, albumArtistIds)
 	songArtistIds = append(songArtistIds, a.AlbumArtistID, a.ArtistID)
 	slices.Sort(songArtistIds)
@@ -208,15 +210,12 @@ func (mfs MediaFiles) ToAlbum() Album {
 }
 
 func allOrNothing(items []string) (string, int) {
+	sort.Strings(items)
 	items = slices.Compact(items)
-	if len(items) == 1 {
-		return items[0], 1
-	}
-	if len(items) > 1 {
-		sort.Strings(items)
+	if len(items) != 1 {
 		return "", len(slices.Compact(items))
 	}
-	return "", 0
+	return items[0], 1
 }
 
 func minMax(items []int) (int, int) {

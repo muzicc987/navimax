@@ -14,6 +14,7 @@ import (
 	"github.com/navidrome/navidrome/log"
 	"github.com/navidrome/navidrome/model"
 	"github.com/navidrome/navidrome/utils"
+	"github.com/navidrome/navidrome/utils/str"
 	"github.com/pocketbase/dbx"
 )
 
@@ -100,9 +101,9 @@ func (r *artistRepository) Put(a *model.Artist, colsToUpdate ...string) error {
 		return err
 	}
 	if a.ID == consts.VariousArtistsID {
-		return r.updateGenres(a.ID, r.tableName, nil)
+		return r.updateGenres(a.ID, nil)
 	}
-	return r.updateGenres(a.ID, r.tableName, a.Genres)
+	return r.updateGenres(a.ID, a.Genres)
 }
 
 func (r *artistRepository) Get(id string) (*model.Artist, error) {
@@ -115,7 +116,7 @@ func (r *artistRepository) Get(id string) (*model.Artist, error) {
 		return nil, model.ErrNotFound
 	}
 	res := r.toModels(dba)
-	err := r.loadArtistGenres(&res)
+	err := loadAllGenres(r, res)
 	return &res[0], err
 }
 
@@ -127,7 +128,7 @@ func (r *artistRepository) GetAll(options ...model.QueryOptions) (model.Artists,
 		return nil, err
 	}
 	res := r.toModels(dba)
-	err = r.loadArtistGenres(&res)
+	err = loadAllGenres(r, res)
 	return res, err
 }
 
@@ -140,7 +141,7 @@ func (r *artistRepository) toModels(dba []dbArtist) model.Artists {
 }
 
 func (r *artistRepository) getIndexKey(a *model.Artist) string {
-	name := strings.ToLower(utils.NoArticle(a.Name))
+	name := strings.ToLower(str.RemoveArticle(a.Name))
 	for k, v := range r.indexGroups {
 		key := strings.ToLower(k)
 		if strings.HasPrefix(name, key) {

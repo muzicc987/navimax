@@ -12,7 +12,7 @@ import (
 	"github.com/navidrome/navidrome/consts"
 	"github.com/navidrome/navidrome/core/agents"
 	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/utils"
+	"github.com/navidrome/navidrome/utils/str"
 )
 
 const filesystemAgentName = "filesystem"
@@ -48,7 +48,7 @@ func (f *filesystemAgent) GetArtistBiography(ctx context.Context, id, name, mbid
 	for _, al := range als {
 		paths = append(paths, strings.Split(al.Paths, consts.Zwsp)...)
 	}
-	artistFolder := utils.LongestCommonPrefix(paths)
+	artistFolder := str.LongestCommonPrefix(paths)
 	if !strings.HasSuffix(artistFolder, string(filepath.Separator)) {
 		artistFolder, _ = filepath.Split(artistFolder)
 	}

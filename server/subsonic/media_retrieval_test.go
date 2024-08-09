@@ -33,7 +33,7 @@ var _ = Describe("MediaRetrievalController", func() {
 		}
 		artwork = &fakeArtwork{}
 		mockedMetadata = tests.CreateMockExternalMetadata()
-		router = New(ds, artwork, nil, nil, nil, mockedMetadata, nil, nil, nil, nil, nil)
+		router = New(ds, artwork, nil, nil, nil, mockedMetadata, nil, nil, nil, nil, nil, nil)
 		w = httptest.NewRecorder()
 	})
 
@@ -375,7 +375,7 @@ type fakeArtwork struct {
 	recvSize int
 }
 
-func (c *fakeArtwork) GetOrPlaceholder(_ context.Context, id string, size int) (io.ReadCloser, time.Time, error) {
+func (c *fakeArtwork) GetOrPlaceholder(_ context.Context, id string, size int, square bool) (io.ReadCloser, time.Time, error) {
 	if c.err != nil {
 		return nil, time.Time{}, c.err
 	}

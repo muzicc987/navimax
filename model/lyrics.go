@@ -1,12 +1,14 @@
 package model
 
 import (
+	"cmp"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/utils"
+	"github.com/navidrome/navidrome/utils/str"
 )
 
 type Line struct {
@@ -34,7 +36,7 @@ var (
 )
 
 func ToLyrics(language, text string) (*Lyrics, error) {
-	text = utils.SanitizeText(text)
+	text = str.SanitizeText(text)
 
 	lines := strings.Split(text, "\n")
 
@@ -46,6 +48,7 @@ func ToLyrics(language, text string) (*Lyrics, error) {
 	synced := syncRegex.MatchString(text)
 	priorLine := ""
 	validLine := false
+	repeated := false
 	var timestamps []int64
 
 	for _, line := range lines {
@@ -64,7 +67,7 @@ func ToLyrics(language, text string) (*Lyrics, error) {
 			if idTag != nil {
 				switch idTag[1] {
 				case "ar":
-					artist = utils.SanitizeText(strings.TrimSpace(idTag[2]))
+					artist = str.SanitizeText(strings.TrimSpace(idTag[2]))
 				case "offset":
 					{
 						off, err := strconv.ParseInt(strings.TrimSpace(idTag[2]), 10, 64)
@@ -75,13 +78,17 @@ func ToLyrics(language, text string) (*Lyrics, error) {
 						}
 					}
 				case "ti":
-					title = utils.SanitizeText(strings.TrimSpace(idTag[2]))
+					title = str.SanitizeText(strings.TrimSpace(idTag[2]))
 				}
 
 				continue
 			}
 
 			times := timeRegex.FindAllStringSubmatchIndex(line, -1)
+			if len(times) > 1 {
+				repeated = true
+			}
+
 			// The second condition is for when there is a timestamp in the middle of
 			// a line (after any text)
 			if times == nil || times[0][0] != 0 {
@@ -105,9 +112,6 @@ func ToLyrics(language, text string) (*Lyrics, error) {
 
 			// [fullStart, fullEnd, hourStart, hourEnd, minStart, minEnd, secStart, secEnd, msStart, msEnd]
 			for _, match := range times {
-				var hours, millis int64
-				var err error
-
 				// for multiple matches, we need to check that later matches are not
 				// in the middle of the string
 				if end != 0 {
@@ -118,46 +122,11 @@ func ToLyrics(language, text string) (*Lyrics, error) {
 				}
 
 				end = match[1]
-
-				hourStart := match[2]
-				if hourStart != -1 {
-					// subtract 1 because group has : at the end
-					hourEnd := match[3] - 1
-					hours, err = strconv.ParseInt(line[hourStart:hourEnd], 10, 64)
-					if err != nil {
-						return nil, err
-					}
-				}
-
-				minutes, err := strconv.ParseInt(line[match[4]:match[5]], 10, 64)
+				timeInMillis, err := parseTime(line, match)
 				if err != nil {
 					return nil, err
 				}
 
-				sec, err := strconv.ParseInt(line[match[6]:match[7]], 10, 64)
-				if err != nil {
-					return nil, err
-				}
-
-				msStart := match[8]
-				if msStart != -1 {
-					msEnd := match[9]
-					// +1 offset since this capture group contains .
-					millis, err = strconv.ParseInt(line[msStart+1:msEnd], 10, 64)
-					if err != nil {
-						return nil, err
-					}
-
-					length := msEnd - msStart
-
-					if length == 3 {
-						millis *= 10
-					} else if length == 2 {
-						millis *= 100
-					}
-				}
-
-				timeInMillis := (((((hours * 60) + minutes) * 60) + sec) * 1000) + millis
 				timestamps = append(timestamps, timeInMillis)
 			}
 
@@ -186,6 +155,14 @@ func ToLyrics(language, text string) (*Lyrics, error) {
 		}
 	}
 
+	// If there are repeated values, there is no guarantee that they are in order
+	// In this, case, sort the lyrics by start time
+	if repeated {
+		slices.SortFunc(structuredLines, func(a, b Line) int {
+			return cmp.Compare(*a.Start, *b.Start)
+		})
+	}
+
 	lyrics := Lyrics{
 		DisplayArtist: artist,
 		DisplayTitle:  title,
@@ -196,6 +173,52 @@ func ToLyrics(language, text string) (*Lyrics, error) {
 	}
 
 	return &lyrics, nil
+}
+
+func parseTime(line string, match []int) (int64, error) {
+	var hours, millis int64
+	var err error
+
+	hourStart := match[2]
+	if hourStart != -1 {
+		// subtract 1 because group has : at the end
+		hourEnd := match[3] - 1
+		hours, err = strconv.ParseInt(line[hourStart:hourEnd], 10, 64)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	minutes, err := strconv.ParseInt(line[match[4]:match[5]], 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	sec, err := strconv.ParseInt(line[match[6]:match[7]], 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	msStart := match[8]
+	if msStart != -1 {
+		msEnd := match[9]
+		// +1 offset since this capture group contains .
+		millis, err = strconv.ParseInt(line[msStart+1:msEnd], 10, 64)
+		if err != nil {
+			return 0, err
+		}
+
+		length := msEnd - msStart
+
+		if length == 3 {
+			millis *= 10
+		} else if length == 2 {
+			millis *= 100
+		}
+	}
+
+	timeInMillis := (((((hours * 60) + minutes) * 60) + sec) * 1000) + millis
+	return timeInMillis, nil
 }
 
 type LyricList []Lyrics

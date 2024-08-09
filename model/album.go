@@ -12,6 +12,7 @@ type Album struct {
 	Annotations `structs:"-"`
 
 	ID                    string     `structs:"id" json:"id"`
+	LibraryID             int        `structs:"library_id" json:"libraryId"`
 	Name                  string     `structs:"name" json:"name"`
 	EmbedArtPath          string     `structs:"embed_art_path" json:"embedArtPath"`
 	ArtistID              string     `structs:"artist_id" json:"artistId"`
@@ -35,7 +36,7 @@ type Album struct {
 	Genre                 string     `structs:"genre" json:"genre"`
 	Genres                Genres     `structs:"-" json:"genres"`
 	Discs                 Discs      `structs:"discs" json:"discs,omitempty"`
-	FullText              string     `structs:"full_text" json:"fullText"`
+	FullText              string     `structs:"full_text" json:"-"`
 	SortAlbumName         string     `structs:"sort_album_name" json:"sortAlbumName,omitempty"`
 	SortArtistName        string     `structs:"sort_artist_name" json:"sortArtistName,omitempty"`
 	SortAlbumArtistName   string     `structs:"sort_album_artist_name" json:"sortAlbumArtistName,omitempty"`
